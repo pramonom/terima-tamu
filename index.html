@@ -1,0 +1,614 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservasi Kepsek - Minimalist</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // Minimalist Monochrome Palette
+                        zinc: {
+                            50: '#fafafa',
+                            100: '#f4f4f5',
+                            200: '#e4e4e7',
+                            300: '#d4d4d8',
+                            400: '#a1a1aa',
+                            500: '#71717a',
+                            600: '#52525b',
+                            700: '#3f3f46',
+                            800: '#27272a',
+                            900: '#18181b',
+                            950: '#09090b', // Deepest background
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans antialiased flex flex-col selection:bg-zinc-800 selection:text-white">
+
+    <!-- Top Navigation -->
+    <nav class="bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 p-4 sticky top-0 z-20">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center">
+                    <i class="ph ph-calendar text-zinc-100 text-lg"></i>
+                </div>
+                <h1 class="font-medium text-zinc-100 text-sm sm:text-base tracking-wide">Reservasi Kepala Sekolah</h1>
+            </div>
+            
+            <!-- Role Switcher -->
+            <div class="flex bg-zinc-900 rounded-full p-1 border border-zinc-800">
+                <button onclick="switchRole('student')" id="btn-role-student" class="px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-zinc-100 text-zinc-950">
+                    Siswa
+                </button>
+                <button onclick="switchRole('admin')" id="btn-role-admin" class="px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-zinc-400 hover:text-zinc-100">
+                    Admin
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow p-4 md:p-8 flex justify-center w-full overflow-x-hidden">
+        <div class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 md:gap-8">
+
+            <!-- ===================== STUDENT VIEW ===================== -->
+            <div id="view-student" class="w-full flex flex-col lg:flex-row gap-6 md:gap-8 mx-auto">
+                
+                <!-- Left Column: Form & Scan -->
+                <div class="w-full lg:w-1/2 flex flex-col gap-6">
+                    
+                    <!-- Header Text -->
+                    <div>
+                        <h2 class="text-2xl font-light text-zinc-100 mb-2">Buat Janji Temu</h2>
+                        <p class="text-zinc-500 text-sm">Isi formulir di bawah untuk menjadwalkan pertemuan dengan Kepala Sekolah.</p>
+                    </div>
+
+                    <!-- Face Scan Section -->
+                    <div id="scan-container" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden hidden transition-all duration-500">
+                        <div class="w-32 h-32 md:w-40 md:h-40 rounded-full border border-dashed border-zinc-600 mb-6 flex items-center justify-center relative overflow-hidden bg-zinc-950">
+                            <i id="scan-icon" class="ph ph-scan text-4xl text-zinc-500 absolute z-10"></i>
+                            <video id="camera-feed" class="absolute w-full h-full object-cover hidden z-0" autoplay playsinline></video>
+                            <div id="scan-line" class="absolute w-full h-1 bg-zinc-100 hidden shadow-[0_0_10px_#fff] z-20"></div>
+                        </div>
+                        <p id="scan-text" class="text-zinc-400 text-sm mb-6 text-center">Verifikasi identitas Anda untuk melanjutkan.</p>
+                        <button id="btn-start-scan" onclick="startScanning()" class="w-full bg-zinc-100 text-zinc-950 font-medium py-3 rounded-xl hover:bg-white transition-colors flex justify-center items-center gap-2 text-sm">
+                            <i class="ph ph-camera"></i> Mulai Scan Wajah
+                        </button>
+                    </div>
+
+                    <!-- Request Form -->
+                    <div id="form-container" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 md:p-8 relative opacity-40 pointer-events-none transition-all duration-500">
+                        
+                        <!-- Lock Overlay -->
+                        <div id="form-lock" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-2xl p-4 text-center transition-opacity duration-300">
+                            <div class="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
+                                <i class="ph ph-lock-key text-xl text-zinc-400"></i>
+                            </div>
+                            <p class="text-sm text-zinc-300 font-medium">Form Terkunci</p>
+                            <p class="text-xs text-zinc-500 mt-1 mb-4">Lakukan pemindaian wajah untuk membuka form.</p>
+                            <button onclick="document.getElementById('scan-container').classList.remove('hidden'); document.getElementById('form-container').classList.add('hidden');" class="text-zinc-100 text-sm font-medium border-b border-zinc-100 pb-0.5 hover:text-zinc-300 hover:border-zinc-300 transition-colors">Verifikasi Sekarang</button>
+                        </div>
+
+                        <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">Nama Lengkap</label>
+                                <input type="text" id="input-name" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-zinc-100 text-sm transition-all" placeholder="Mis: Budi Santoso">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">Kelas</label>
+                                    <input type="text" id="input-class" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-zinc-100 text-sm transition-all" placeholder="Mis: XII IPA 1">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">NISN</label>
+                                    <input type="number" id="input-nisn" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-zinc-100 text-sm transition-all" placeholder="Nomor Induk">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">Alasan / Tujuan</label>
+                                <textarea id="input-reason" required rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-zinc-100 text-sm transition-all resize-none" placeholder="Tuliskan tujuan pertemuan Anda..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">Estimasi Waktu</label>
+                                <select id="input-duration" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-zinc-100 appearance-none text-sm transition-all">
+                                    <option value="15 Menit">15 Menit</option>
+                                    <option value="30 Menit">30 Menit</option>
+                                    <option value="45 Menit">45 Menit</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-zinc-100 text-zinc-950 font-medium py-3 rounded-xl hover:bg-white transition-colors mt-4 text-sm">
+                                Kirim Pengajuan
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column: Status Tracking -->
+                <div class="w-full lg:w-1/2 flex flex-col gap-4">
+                    <h3 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-2">Riwayat Pengajuan</h3>
+                    <div id="student-history" class="space-y-3">
+                        <!-- History cards will be injected here via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== ADMIN VIEW ===================== -->
+            <div id="view-admin" class="w-full hidden flex flex-col gap-6">
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2">
+                    <div>
+                        <h2 class="text-2xl font-light text-zinc-100 mb-2">Dasbor Admin</h2>
+                        <p class="text-zinc-500 text-sm">Kelola antrean permohonan janji temu Kepala Sekolah.</p>
+                    </div>
+                    <!-- Mock Stats -->
+                    <div class="flex gap-4">
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 flex flex-col">
+                            <span class="text-xs text-zinc-500 uppercase">Menunggu</span>
+                            <span class="text-lg font-medium text-zinc-100">2</span>
+                        </div>
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 flex flex-col">
+                            <span class="text-xs text-zinc-500 uppercase">Hari Ini</span>
+                            <span class="text-lg font-medium text-zinc-100">4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Table -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-zinc-950/50 border-b border-zinc-800">
+                                <tr>
+                                    <th class="px-6 py-4 font-medium text-zinc-400 text-xs uppercase tracking-wider">Identitas Siswa</th>
+                                    <th class="px-6 py-4 font-medium text-zinc-400 text-xs uppercase tracking-wider">Tujuan</th>
+                                    <th class="px-6 py-4 font-medium text-zinc-400 text-xs uppercase tracking-wider">Durasi</th>
+                                    <th class="px-6 py-4 font-medium text-zinc-400 text-xs uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 font-medium text-zinc-400 text-xs uppercase tracking-wider text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-table-body" class="divide-y divide-zinc-800">
+                                <!-- Admin rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Admin Decision Modal -->
+    <div id="admin-modal" class="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 md:p-8 w-full max-w-sm transform scale-95 transition-transform duration-300" id="admin-modal-content">
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="modal-title" class="text-lg font-medium text-zinc-100">Konfirmasi</h3>
+                <button onclick="closeAdminModal()" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="modal-body-approve" class="hidden space-y-4">
+                <p class="text-sm text-zinc-400 mb-2">Tentukan jam pertemuan untuk menyetujui pengajuan ini.</p>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Waktu Pertemuan</label>
+                    <input type="time" id="modal-time" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 text-zinc-100 text-sm mb-3">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Catatan (Opsional)</label>
+                    <input type="text" id="modal-note-approve" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 text-zinc-100 text-sm" placeholder="Mis: Bawa dokumen terkait">
+                </div>
+                <button onclick="submitAdminDecision('approve')" class="w-full bg-zinc-100 text-zinc-950 font-medium py-3 rounded-xl hover:bg-white transition-colors mt-2 text-sm">Konfirmasi Persetujuan</button>
+            </div>
+
+            <div id="modal-body-reject" class="hidden space-y-4">
+                <p class="text-sm text-zinc-400 mb-2">Berikan alasan penolakan atau penjadwalan ulang.</p>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Alasan Penolakan</label>
+                    <textarea id="modal-note-reject" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 text-zinc-100 text-sm resize-none" placeholder="Mis: Kepsek sedang dinas luar kota..."></textarea>
+                </div>
+                <button onclick="submitAdminDecision('reject')" class="w-full bg-zinc-800 text-zinc-100 border border-zinc-700 font-medium py-3 rounded-xl hover:bg-zinc-700 transition-colors mt-2 text-sm">Tolak Pengajuan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let currentRole = 'student';
+        let activeAppointmentId = null;
+        let isScanned = false;
+        let videoStream = null;
+
+        // Mock Database
+        let appointments = [
+            {
+                id: 1,
+                name: "Siti Aminah",
+                class: "XI IPS 2",
+                nisn: "0023456789",
+                reason: "Konsultasi mengenai program beasiswa jalur prestasi.",
+                duration: "30 Menit",
+                status: "Sedang Diproses",
+                time: null,
+                note: null
+            },
+            {
+                id: 2,
+                name: "Andi Darmawan",
+                class: "XII IPA 3",
+                nisn: "0019876543",
+                reason: "Meminta tanda tangan persetujuan proposal acara OSIS tahunan.",
+                duration: "15 Menit",
+                status: "Disetujui",
+                time: "10:30 WIB",
+                note: "Bawa proposal rangkap dua."
+            }
+        ];
+
+        // Switch View Logic
+        function switchRole(role) {
+            currentRole = role;
+            const btnStudent = document.getElementById('btn-role-student');
+            const btnAdmin = document.getElementById('btn-role-admin');
+            const viewStudent = document.getElementById('view-student');
+            const viewAdmin = document.getElementById('view-admin');
+
+            if (role === 'student') {
+                btnStudent.className = "px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-zinc-100 text-zinc-950";
+                btnAdmin.className = "px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-zinc-400 hover:text-zinc-100";
+                viewStudent.classList.remove('hidden');
+                viewAdmin.classList.add('hidden');
+                
+                // Show scan screen if not scanned yet
+                if (!isScanned) {
+                    document.getElementById('scan-container').classList.remove('hidden');
+                    document.getElementById('form-container').classList.add('hidden');
+                    
+                    // Reset UI Scan
+                    const btn = document.getElementById('btn-start-scan');
+                    btn.disabled = false;
+                    btn.classList.remove('bg-zinc-800', 'text-zinc-100', 'border', 'border-zinc-700', 'opacity-50');
+                    btn.classList.add('bg-zinc-100', 'text-zinc-950');
+                    btn.innerHTML = `<i class="ph ph-camera"></i> Mulai Scan Wajah`;
+                    document.getElementById('scan-text').innerText = "Verifikasi identitas Anda untuk melanjutkan.";
+                    document.getElementById('camera-feed').classList.add('hidden');
+                    document.getElementById('scan-icon').classList.remove('hidden');
+                }
+                
+                renderStudentHistory();
+            } else {
+                btnAdmin.className = "px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-zinc-100 text-zinc-950";
+                btnStudent.className = "px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-zinc-400 hover:text-zinc-100";
+                viewAdmin.classList.remove('hidden');
+                viewStudent.classList.add('hidden');
+                renderAdminTable();
+            }
+        }
+
+        // Real Camera & Mock Facial Recognition Logic
+        async function startScanning() {
+            const btn = document.getElementById('btn-start-scan');
+            const text = document.getElementById('scan-text');
+            const scanLine = document.getElementById('scan-line');
+            const videoElement = document.getElementById('camera-feed');
+            const scanIcon = document.getElementById('scan-icon');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            btn.innerHTML = `<i class="ph ph-spinner-gap animate-spin"></i> Menyiapkan Kamera...`;
+            text.innerText = "Meminta izin akses kamera...";
+            
+            try {
+                // Request camera access (front facing camera preferably)
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                
+                // Attach stream to video element
+                videoElement.srcObject = videoStream;
+                videoElement.classList.remove('hidden');
+                scanIcon.classList.add('hidden');
+
+                btn.innerHTML = `<i class="ph ph-spinner-gap animate-spin"></i> Memindai Wajah...`;
+                text.innerText = "Mohon tahan posisi wajah Anda di dalam lingkaran...";
+                
+                // Animation for scan line
+                scanLine.classList.remove('hidden');
+                let position = 0;
+                let direction = 1;
+                const containerHeight = videoElement.offsetHeight || 128; // Fallback to 128px if offsetHeight is 0
+                
+                const scanInterval = setInterval(() => {
+                    position += 5 * direction;
+                    if(position > containerHeight - 10 || position < 0) direction *= -1;
+                    scanLine.style.top = position + 'px';
+                }, 30);
+
+                // Mock network delay for processing AI (3 seconds)
+                setTimeout(() => {
+                    clearInterval(scanInterval);
+                    scanLine.classList.add('hidden');
+                    
+                    // Stop camera stream to release device hardware
+                    if (videoStream) {
+                        videoStream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    btn.innerHTML = `<i class="ph ph-check-circle"></i> Terverifikasi`;
+                    btn.classList.remove('bg-zinc-100', 'text-zinc-950', 'opacity-50');
+                    btn.classList.add('bg-zinc-800', 'text-zinc-100', 'border', 'border-zinc-700');
+                    text.innerText = "Identitas terkonfirmasi sebagai Siswa.";
+                    isScanned = true;
+
+                    setTimeout(() => {
+                        document.getElementById('scan-container').classList.add('hidden');
+                        const formContainer = document.getElementById('form-container');
+                        const formLock = document.getElementById('form-lock');
+                        
+                        formContainer.classList.remove('hidden', 'opacity-40', 'pointer-events-none');
+                        formLock.style.opacity = '0';
+                        setTimeout(() => formLock.classList.add('hidden'), 300);
+                        
+                        showToast("Sistem terbuka. Silakan isi form.");
+                    }, 1000);
+
+                }, 3000);
+
+            } catch (error) {
+                // Handle error (e.g., permission denied, no camera device found)
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+                btn.innerHTML = `<i class="ph ph-warning-circle"></i> Coba Lagi`;
+                text.innerText = "Akses kamera ditolak. Pastikan browser Anda mengizinkan akses kamera.";
+                showToast("Gagal mengakses kamera.");
+            }
+        }
+
+        // Render Student UI
+        function renderStudentHistory() {
+            const container = document.getElementById('student-history');
+            container.innerHTML = '';
+
+            // Sort appointments: new first
+            const sortedAppointments = [...appointments].reverse();
+
+            if (sortedAppointments.length === 0) {
+                container.innerHTML = '<p class="text-sm text-zinc-500 p-4 border border-zinc-800 rounded-xl text-center">Belum ada pengajuan janji temu.</p>';
+                return;
+            }
+
+            sortedAppointments.forEach(apt => {
+                let statusBadge = "";
+                let iconClass = "";
+                
+                // Minimalist badges
+                if (apt.status === "Disetujui") {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-zinc-100 text-zinc-950 tracking-wide uppercase">Disetujui</span>`;
+                    iconClass = "text-zinc-100";
+                } else if (apt.status === "Ditolak") {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-md text-[10px] font-medium border border-zinc-700 text-zinc-400 tracking-wide uppercase">Ditolak</span>`;
+                    iconClass = "text-zinc-500";
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 rounded-md text-[10px] font-medium border border-zinc-700 text-zinc-300 tracking-wide uppercase">Diproses</span>`;
+                    iconClass = "text-zinc-400";
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-zinc-900 p-5 rounded-2xl border border-zinc-800 hover:border-zinc-700 transition-colors";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-4 mb-3">
+                        <p class="text-sm text-zinc-200 leading-relaxed font-medium line-clamp-2 flex-grow">${apt.reason}</p>
+                        <div class="shrink-0 mt-0.5">${statusBadge}</div>
+                    </div>
+                    
+                    <div class="space-y-2 text-xs text-zinc-500 pt-3 border-t border-zinc-800/50">
+                        <div class="flex items-center gap-2"><i class="ph ph-clock text-lg ${iconClass}"></i> <span>Durasi: <span class="text-zinc-300">${apt.duration}</span></span></div>
+                        ${apt.status === 'Disetujui' ? `<div class="flex items-center gap-2 text-zinc-100"><i class="ph ph-calendar-check text-lg"></i> <span>Jadwal: <strong>${apt.time}</strong></span></div>` : ''}
+                        ${apt.note ? `<div class="flex items-start gap-2 mt-2 p-3 bg-zinc-950 rounded-lg border border-zinc-800 text-zinc-400"><i class="ph ph-info text-lg mt-[-2px]"></i> <span class="leading-relaxed"><strong>Catatan:</strong> ${apt.note}</span></div>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Render Admin UI
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '';
+
+            appointments.forEach(apt => {
+                let statusDot = "";
+                let statusText = apt.status;
+                
+                if (apt.status === "Sedang Diproses") {
+                    statusDot = `<div class="w-1.5 h-1.5 rounded-full bg-zinc-400 mr-2"></div>`;
+                    statusText = `<span class="text-zinc-400">Diproses</span>`;
+                }
+                else if (apt.status === "Disetujui") {
+                    statusDot = `<div class="w-1.5 h-1.5 rounded-full bg-zinc-100 mr-2"></div>`;
+                    statusText = `<span class="text-zinc-100 font-medium">Disetujui</span>`;
+                }
+                else if (apt.status === "Ditolak") {
+                    statusDot = `<div class="w-1.5 h-1.5 rounded-full border border-zinc-500 mr-2"></div>`;
+                    statusText = `<span class="text-zinc-500">Ditolak</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-800/30 transition-colors group";
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <p class="font-medium text-zinc-100">${apt.name}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">${apt.class} • ${apt.nisn}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="truncate max-w-[200px] text-zinc-300 text-sm" title="${apt.reason}">${apt.reason}</p>
+                    </td>
+                    <td class="px-6 py-4 text-zinc-400 text-sm">${apt.duration}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center text-sm">
+                            ${statusDot} ${statusText}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        ${apt.status === "Sedang Diproses" ? `
+                            <div class="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <button onclick="openAdminModal(${apt.id}, 'approve')" class="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-800 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-950 transition-colors border border-zinc-700" title="Setujui"><i class="ph ph-check"></i></button>
+                                <button onclick="openAdminModal(${apt.id}, 'reject')" class="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-950 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors border border-zinc-800" title="Tolak"><i class="ph ph-x"></i></button>
+                            </div>
+                        ` : '<span class="text-xs text-zinc-600 font-medium tracking-wide">SELESAI</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Handle Form Submission
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('input-name').value;
+            const className = document.getElementById('input-class').value;
+            const nisn = document.getElementById('input-nisn').value;
+            const reason = document.getElementById('input-reason').value;
+            const duration = document.getElementById('input-duration').value;
+
+            const newAppt = {
+                id: Date.now(),
+                name: name,
+                class: className,
+                nisn: nisn,
+                reason: reason,
+                duration: duration,
+                status: "Sedang Diproses",
+                time: null,
+                note: null
+            };
+
+            appointments.push(newAppt);
+            document.getElementById('request-form').reset();
+            
+            showToast("Pengajuan berhasil dikirim.");
+            renderStudentHistory();
+        }
+
+        // Admin Modal Controls
+        function openAdminModal(id, action) {
+            activeAppointmentId = id;
+            const modal = document.getElementById('admin-modal');
+            const content = document.getElementById('admin-modal-content');
+            const title = document.getElementById('modal-title');
+            
+            document.getElementById('modal-body-approve').classList.add('hidden');
+            document.getElementById('modal-body-reject').classList.add('hidden');
+
+            if (action === 'approve') {
+                title.innerText = "Setujui Pertemuan";
+                document.getElementById('modal-body-approve').classList.remove('hidden');
+                document.getElementById('modal-time').value = "";
+                document.getElementById('modal-note-approve').value = "";
+            } else {
+                title.innerText = "Tolak Pengajuan";
+                document.getElementById('modal-body-reject').classList.remove('hidden');
+                document.getElementById('modal-note-reject').value = "";
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeAdminModal() {
+            const modal = document.getElementById('admin-modal');
+            const content = document.getElementById('admin-modal-content');
+            
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            activeAppointmentId = null;
+        }
+
+        function submitAdminDecision(action) {
+            const aptIndex = appointments.findIndex(a => a.id === activeAppointmentId);
+            if (aptIndex === -1) return;
+
+            if (action === 'approve') {
+                const time = document.getElementById('modal-time').value;
+                const note = document.getElementById('modal-note-approve').value;
+                if (!time) {
+                    showToast("Harap tentukan jam pertemuan!");
+                    return;
+                }
+                appointments[aptIndex].status = "Disetujui";
+                appointments[aptIndex].time = time + " WIB";
+                appointments[aptIndex].note = note || "-";
+                showToast("Pengajuan disetujui.");
+            } else {
+                const note = document.getElementById('modal-note-reject').value;
+                if (!note) {
+                    showToast("Harap berikan alasan penolakan!");
+                    return;
+                }
+                appointments[aptIndex].status = "Ditolak";
+                appointments[aptIndex].note = note;
+                showToast("Pengajuan ditolak.");
+            }
+
+            closeAdminModal();
+            renderAdminTable();
+        }
+
+        // Custom Toast Notification (Minimalist)
+        function showToast(message) {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.custom-toast');
+            existingToasts.forEach(t => t.remove());
+
+            const toast = document.createElement('div');
+            toast.className = "custom-toast fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-zinc-100 text-zinc-950 px-5 py-3 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] text-sm z-[100] transition-all duration-300 flex items-center gap-3 w-max max-w-[90%] font-medium opacity-0 translate-y-4";
+            toast.innerHTML = `<i class="ph-fill ph-bell text-zinc-500 text-lg"></i> <span>${message}</span>`;
+            
+            document.body.appendChild(toast);
+            
+            // Trigger reflow for animation
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize App
+        window.onload = () => {
+            if (!isScanned) {
+                document.getElementById('scan-container').classList.remove('hidden');
+            }
+            renderStudentHistory();
+        };
+    </script>
+</body>
+</html>
+```
